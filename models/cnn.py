@@ -29,7 +29,6 @@ def criarCnn(input_shape, n_classes):
         tf.keras.layers.Dense(n_classes, activation="softmax")
     ])
 
-    # Reduzi o Learning Rate para 0.0005 para uma convergência mais suave
     opt = tf.keras.optimizers.Adam(learning_rate=0.0005)
     model.compile(optimizer=opt, loss="categorical_crossentropy", metrics=["accuracy"])
 

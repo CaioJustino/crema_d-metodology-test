@@ -12,7 +12,6 @@ LABELS = ['NEU', 'HAP', 'SAD', 'ANG', 'FEA', 'DIS']
 LABEL_MAP = {label: i for i, label in enumerate(LABELS)}
 
 def get_splits_from_csv(csv_path):
-    """Lógica fiel ao crema_d.py usando o summaryTable.csv"""
     bad_files = {
         'FileName',
         '1040_ITH_SAD_XX',
@@ -21,7 +20,6 @@ def get_splits_from_csv(csv_path):
         '1017_IWW_FEA_XX',
     }
 
-    # Lemos o CSV sem assumir nomes de colunas específicos
     try:
         df = pd.read_csv(csv_path)
     except Exception as e:
@@ -31,7 +29,6 @@ def get_splits_from_csv(csv_path):
     valid_items = []
     for _, row in df.iterrows():
         try:
-            # .iloc[1] pega a segunda coluna (onde geralmente está o nome do arquivo)
             wav_name = str(row.iloc[1]).replace('"', '').strip()
             
             if (not wav_name) or (wav_name in bad_files) or (wav_name == 'nan'):
@@ -99,7 +96,6 @@ def process_and_save(raw_path, processed_path, csv_path):
             file_path = os.path.join(raw_path, f"{wav_name}.wav")
             
             if os.path.exists(file_path):
-                # Extrai a label do nome do arquivo (ex: 1001_DFA_ANG_XX -> ANG)
                 parts = wav_name.split('_')
                 if len(parts) >= 3:
                     label_str = parts[2]
