@@ -37,7 +37,7 @@ O objetivo é classificar áudios em 6 emoções básicas:
 ### 1. Fonte de Verdade (`summaryTable.csv`)
 Diferente de abordagens que processam todos os arquivos de uma pasta, este projeto utiliza o arquivo de metadados oficial para:
 * Ignorar arquivos corrompidos ou com labels inconsistentes (ex: `1040_ITH_SAD_XX`).
-* Garantir a integridade dos rótulos utilizados no treinamento.
+* Garantir a integridade dos rótulos utilizados no Treinamento.
 
 ### 2. Extração de Features (MFCC)
 O áudio bruto é convertido em **Coeficientes Cepstrais de Frequência Mel (MFCCs)**. 
