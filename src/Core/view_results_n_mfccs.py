@@ -8,12 +8,10 @@ def extrair_metricas_completas():
     res_base_path = "resultados"
     modelos = ["CNN", "CRNN", "RESNET"]
     sementes = [42, 123, 999]
-    # Lista de métricas que queremos extrair
     metricas_alvo = ["accuracy", "recall", "precision", "f1-score"]
     
     pastas = sorted([int(d.split('_')[-1]) for d in os.listdir(res_base_path) if d.startswith("n_mfccs_")])
     
-    # Estrutura: data[modelo][metrica] = {mfcc: [valores_das_seeds]}
     data = {m: {met: {n: [] for n in pastas} for met in metricas_alvo} for m in modelos}
 
     for n in pastas:
@@ -24,11 +22,8 @@ def extrair_metricas_completas():
                     with open(path, 'rb') as f:
                         h = pickle.load(f)
                         
-                        # Extração das métricas (ajuste as chaves conforme seu dicionário)
-                        # Geralmente a acurácia está no histórico, e as outras no classification_report
                         data[m]["accuracy"][n].append(max(h.get('val_accuracy', [0])))
                         
-                        # Se você salvou o classification_report como um dict:
                         report = h.get('classification_report', {})
                         if isinstance(report, dict) and 'macro avg' in report:
                             data[m]["recall"][n].append(report['macro avg']['recall'])
@@ -58,7 +53,6 @@ def plotar_benchmark_completo(data, pastas, modelos, metricas):
             
             if mfccs_validos:
                 line = ax.plot(mfccs_validos, medias, label=m, color=cores[m], marker='o', linewidth=2)
-                # Adiciona área de desvio padrão (sombra) para mostrar estabilidade entre seeds
                 ax.fill_between(mfccs_validos, np.array(medias) - np.array(stds), 
                                 np.array(medias) + np.array(stds), color=cores[m], alpha=0.1)
 
@@ -68,7 +62,7 @@ def plotar_benchmark_completo(data, pastas, modelos, metricas):
         ax.get_xaxis().set_major_formatter(plt.ScalarFormatter())
         ax.set_xlabel("Número de MFCCs")
         ax.set_ylabel("Pontuação (Score)")
-        ax.set_ylim(0.3, 0.7) # Ajuste conforme seus resultados
+        ax.set_ylim(0.3, 0.7)
         ax.legend()
         ax.grid(True, alpha=0.3)
 

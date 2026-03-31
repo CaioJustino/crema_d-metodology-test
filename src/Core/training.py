@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report # Adicionado para métricas detalhadas
+from sklearn.metrics import classification_report
 from models.cnn import criar_cnn
 from models.resnet import criar_resnet
 from models.crnn import criar_crnn
@@ -34,13 +34,11 @@ def log_exec_time_pkl(arquitetura, n_mfccs, seed, elapsed_time):
 def train_model(processed_path, n_classes, arquitetura, qtdEpocas, flexMfccs, seed):
     tf.keras.utils.set_random_seed(seed)
     
-    # Carregamento de dados
     X_train = np.load(os.path.join(processed_path, "X_train.npy"))
     y_train = np.load(os.path.join(processed_path, "y_train.npy"))
     X_val = np.load(os.path.join(processed_path, "X_validation.npy"))
     y_val = np.load(os.path.join(processed_path, "y_validation.npy"))
 
-    # Normalização
     b, t, f = X_train.shape
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train.reshape(-1, f)).reshape(-1, t, f)
@@ -53,13 +51,11 @@ def train_model(processed_path, n_classes, arquitetura, qtdEpocas, flexMfccs, se
     X_val_in = X_val[..., np.newaxis]
     input_shape = (t, f, 1)
 
-    # Seleção da Arquitetura
     arch = arquitetura.upper()
     if arch == 'CNN': model = criar_cnn(input_shape, n_classes)
     elif arch == 'RESNET': model = criar_resnet(input_shape, n_classes)
     elif arch == 'CRNN': model = criar_crnn(input_shape, n_classes)
 
-    # Compilação com métricas adicionais para monitoramento durante o treino
     model.compile(
         optimizer=tf.keras.optimizers.Adam(0.0005), 
         loss="categorical_crossentropy", 
@@ -77,17 +73,13 @@ def train_model(processed_path, n_classes, arquitetura, qtdEpocas, flexMfccs, se
     )
     elapsed_time = time.time() - start_time
     
-    # --- CÁLCULO DE MÉTRICAS FINAIS (F1, Precision, Recall por classe) ---
     y_pred_probs = model.predict(X_val_in)
     y_pred_labels = np.argmax(y_pred_probs, axis=1)
     
-    # Gera o relatório formatado como dicionário
     report = classification_report(y_val, y_pred_labels, output_dict=True, zero_division=0)
     
-    # Consolida tudo no dicionário de histórico
     final_history = history.history
     final_history['classification_report'] = report
-    # --------------------------------------------------------------------
 
     log_exec_time_pkl(arch, flexMfccs, seed, elapsed_time)
     
