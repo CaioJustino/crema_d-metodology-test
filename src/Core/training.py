@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report # Adicionado para métricas detalhadas
 from models.cnn import criar_cnn
 from models.resnet import criar_resnet
 from models.crnn import criar_crnn
@@ -17,7 +18,7 @@ def log_exec_time_pkl(arquitetura, n_mfccs, seed, elapsed_time):
         try:
             with open(pkl_path, 'rb') as f:
                 dados_tempo = pickle.load(f)
-        except EOFError:
+        except (EOFError, FileNotFoundError):
             pass
 
     if arquitetura not in dados_tempo:
@@ -33,35 +34,61 @@ def log_exec_time_pkl(arquitetura, n_mfccs, seed, elapsed_time):
 def train_model(processed_path, n_classes, arquitetura, qtdEpocas, flexMfccs, seed):
     tf.keras.utils.set_random_seed(seed)
     
+    # Carregamento de dados
     X_train = np.load(os.path.join(processed_path, "X_train.npy"))
     y_train = np.load(os.path.join(processed_path, "y_train.npy"))
     X_val = np.load(os.path.join(processed_path, "X_validation.npy"))
     y_val = np.load(os.path.join(processed_path, "y_validation.npy"))
 
+    # Normalização
     b, t, f = X_train.shape
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train.reshape(-1, f)).reshape(-1, t, f)
     X_val = scaler.transform(X_val.reshape(-1, f)).reshape(-1, t, f)
 
-    y_train = tf.keras.utils.to_categorical(y_train, n_classes)
-    y_val = tf.keras.utils.to_categorical(y_val, n_classes)
+    y_train_cat = tf.keras.utils.to_categorical(y_train, n_classes)
+    y_val_cat = tf.keras.utils.to_categorical(y_val, n_classes)
 
     X_train_in = X_train[..., np.newaxis]
     X_val_in = X_val[..., np.newaxis]
     input_shape = (t, f, 1)
 
+    # Seleção da Arquitetura
     arch = arquitetura.upper()
     if arch == 'CNN': model = criar_cnn(input_shape, n_classes)
     elif arch == 'RESNET': model = criar_resnet(input_shape, n_classes)
     elif arch == 'CRNN': model = criar_crnn(input_shape, n_classes)
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(0.0005), 
-                  loss="categorical_crossentropy", metrics=["accuracy"])
+    # Compilação com métricas adicionais para monitoramento durante o treino
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(0.0005), 
+        loss="categorical_crossentropy", 
+        metrics=["accuracy", tf.keras.metrics.Precision(name='precision'), tf.keras.metrics.Recall(name='recall')]
+    )
 
     start_time = time.time()
-    history = model.fit(X_train_in, y_train, validation_data=(X_val_in, y_val), epochs=qtdEpocas, batch_size=32, callbacks=[tf.keras.callbacks.EarlyStopping(patience=8, restore_best_weights=True)], verbose=0)
+    history = model.fit(
+        X_train_in, y_train_cat, 
+        validation_data=(X_val_in, y_val_cat), 
+        epochs=qtdEpocas, 
+        batch_size=32, 
+        callbacks=[tf.keras.callbacks.EarlyStopping(patience=8, restore_best_weights=True)], 
+        verbose=1
+    )
     elapsed_time = time.time() - start_time
     
+    # --- CÁLCULO DE MÉTRICAS FINAIS (F1, Precision, Recall por classe) ---
+    y_pred_probs = model.predict(X_val_in)
+    y_pred_labels = np.argmax(y_pred_probs, axis=1)
+    
+    # Gera o relatório formatado como dicionário
+    report = classification_report(y_val, y_pred_labels, output_dict=True, zero_division=0)
+    
+    # Consolida tudo no dicionário de histórico
+    final_history = history.history
+    final_history['classification_report'] = report
+    # --------------------------------------------------------------------
+
     log_exec_time_pkl(arch, flexMfccs, seed, elapsed_time)
     
     res_path = os.path.join("resultados", f"n_mfccs_{flexMfccs}")
@@ -69,4 +96,4 @@ def train_model(processed_path, n_classes, arquitetura, qtdEpocas, flexMfccs, se
     
     nome_arquivo = f"{arch}_history_seed_{seed}.pkl"
     with open(os.path.join(res_path, nome_arquivo), 'wb') as f:
-        pickle.dump(history.history, f)
+        pickle.dump(final_history, f)
