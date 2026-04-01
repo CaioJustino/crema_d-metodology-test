@@ -18,16 +18,12 @@ def log_exec_time_pkl(arquitetura, n_mfccs, seed, elapsed_time):
         try:
             with open(pkl_path, 'rb') as f:
                 dados_tempo = pickle.load(f)
-        except (EOFError, FileNotFoundError):
-            pass
+        except (EOFError, FileNotFoundError): pass
 
-    if arquitetura not in dados_tempo:
-        dados_tempo[arquitetura] = {}
-    if n_mfccs not in dados_tempo[arquitetura]:
-        dados_tempo[arquitetura][n_mfccs] = {}
-        
+    if arquitetura not in dados_tempo: dados_tempo[arquitetura] = {}
+    if n_mfccs not in dados_tempo[arquitetura]: dados_tempo[arquitetura][n_mfccs] = {}
+    
     dados_tempo[arquitetura][n_mfccs][seed] = float(f"{elapsed_time:.2f}")
-
     with open(pkl_path, 'wb') as f:
         pickle.dump(dados_tempo, f)
 
@@ -39,6 +35,7 @@ def train_model(processed_path, n_classes, arquitetura, qtdEpocas, flexMfccs, se
     X_val = np.load(os.path.join(processed_path, "X_validation.npy"))
     y_val = np.load(os.path.join(processed_path, "y_validation.npy"))
 
+    # Escalonamento
     b, t, f = X_train.shape
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train.reshape(-1, f)).reshape(-1, t, f)
@@ -56,36 +53,36 @@ def train_model(processed_path, n_classes, arquitetura, qtdEpocas, flexMfccs, se
     elif arch == 'RESNET': model = criar_resnet(input_shape, n_classes)
     elif arch == 'CRNN': model = criar_crnn(input_shape, n_classes)
 
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(0.0005), 
-        loss="categorical_crossentropy", 
-        metrics=["accuracy", tf.keras.metrics.Precision(name='precision'), tf.keras.metrics.Recall(name='recall')]
-    )
+    model.compile(optimizer=tf.keras.optimizers.Adam(0.0005), 
+                  loss="categorical_crossentropy", metrics=["accuracy"])
 
     start_time = time.time()
     history = model.fit(
         X_train_in, y_train_cat, 
         validation_data=(X_val_in, y_val_cat), 
-        epochs=qtdEpocas, 
-        batch_size=32, 
+        epochs=qtdEpocas, batch_size=32, 
         callbacks=[tf.keras.callbacks.EarlyStopping(patience=8, restore_best_weights=True)], 
         verbose=1
     )
     elapsed_time = time.time() - start_time
     
-    y_pred_probs = model.predict(X_val_in)
-    y_pred_labels = np.argmax(y_pred_probs, axis=1)
+    y_pred = np.argmax(model.predict(X_val_in), axis=1)
+    report = classification_report(y_val, y_pred, output_dict=True, zero_division=0)
+    macro_metrics = report.get('macro avg', {})
     
-    report = classification_report(y_val, y_pred_labels, output_dict=True, zero_division=0)
-    
-    final_history = history.history
-    final_history['classification_report'] = report
+    idx_best = np.argmax(history.history['val_accuracy'])
+    metrics_to_save = {
+        'train_acc': history.history['accuracy'][idx_best],
+        'val_acc': history.history['val_accuracy'][idx_best],
+        'val_precision': macro_metrics.get('precision', 0),
+        'val_recall': macro_metrics.get('recall', 0),
+        'val_f1': macro_metrics.get('f1-score', 0),
+        'classification_report': report
+    }
 
     log_exec_time_pkl(arch, flexMfccs, seed, elapsed_time)
     
-    res_path = os.path.join("resultados", f"n_mfccs_{flexMfccs}")
+    res_path = os.path.join("resultados", f"n_mfccs_{flexMfccs}", f"seed_{seed}")
     os.makedirs(res_path, exist_ok=True)
-    
-    nome_arquivo = f"{arch}_history_seed_{seed}.pkl"
-    with open(os.path.join(res_path, nome_arquivo), 'wb') as f:
-        pickle.dump(final_history, f)
+    with open(os.path.join(res_path, f"{arch}_history.pkl"), 'wb') as f:
+        pickle.dump(metrics_to_save, f)

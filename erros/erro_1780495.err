@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "<frozen runpy>", line 198, in _run_module_as_main
-  File "<frozen runpy>", line 88, in _run_code
-  File "/home/cvajustino/SyncDesk/crema_d-metodology-test/src/Core/main.py", line 6, in <module>
-    from src.Core.processing import process_and_save
-  File "/home/cvajustino/SyncDesk/crema_d-metodology-test/src/Core/processing.py", line 5, in <module>
-    import pandas as pd
-ModuleNotFoundError: No module named 'pandas'
