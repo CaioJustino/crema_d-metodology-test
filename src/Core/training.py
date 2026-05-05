@@ -10,7 +10,6 @@ from models.resnet import criar_resnet
 from models.crnn import criar_crnn
 
 def calcular_energia_kwh(tempo_segundos, p_c=100.0, p_r=50.0, g=1, p_g=250.0):
-    # Fórmula: p_t = (1.58 * t * (p_c + p_r + g * p_g)) / 1000
     t_horas = tempo_segundos / 3600.0
     p_t = (1.58 * t_horas * (p_c + p_r + (g * p_g))) / 1000.0
     return p_t

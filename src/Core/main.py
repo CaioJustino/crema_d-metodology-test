@@ -10,7 +10,6 @@ from src.Core.training import train_model
 def rodar_experimento_mfcc(lista_mfccs: list, qtd_epocas: int, lista_seeds: list):
     RAW_DATA_PATH = "data/raw/AudioWAV"
     BASE_PROCESSED_PATH = "data/processed/AudioMFCC"
-    CSV_PATH = "data/processed/processed_results/summaryTable.csv"
     
     modelos = ["CNN", "CRNN", "ResNet"]
     
@@ -19,7 +18,12 @@ def rodar_experimento_mfcc(lista_mfccs: list, qtd_epocas: int, lista_seeds: list
         print(f"INICIANDO BATERIA: {n_mfcc} MFCCs")
         print(f"{'='*50}")
         
-        path_processado = process_and_save(RAW_DATA_PATH, BASE_PROCESSED_PATH, CSV_PATH, n_mfcc)
+        path_processado = process_and_save(RAW_DATA_PATH, BASE_PROCESSED_PATH, n_mfcc)
+
+        # Trava de segurança: se o processamento falhar (ex: falta de áudios), pula o treino
+        if not path_processado:
+            print(f"!!! Processamento falhou ou dados não encontrados para {n_mfcc} MFCCs. Pulando bateria. !!!")
+            continue
 
         for modelo in modelos:
             print(f"\n{'-'*30}\n>>> Arquitetura: {modelo} | MFCCs: {n_mfcc}\n{'-'*30}")
