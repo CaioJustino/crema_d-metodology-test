@@ -1,10 +1,11 @@
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from src.Core.processing import process_and_save
 from src.Core.training import train_model
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 
 def rodar_experimento_mfcc(lista_mfccs: list, qtd_epocas: int, lista_seeds: list):
     RAW_DATA_PATH = "data/raw/AudioWAV"
